@@ -25,6 +25,14 @@ Presupuesto global: ≤ 200 variantes evaluadas en val. Cada exploración en tra
 - Rejilla: formación ∈ {6, 12, 24} barras, retención ∈ {12, 24, 48}, cuantil ∈ {10%, 20%} → 18 variantes.
 - Sirve como piso: si una idea nuestra no supera claramente esta, no aporta.
 
+
+### EXP-005: funding extremo, contrarian (a priori, registrada 2026-11-20 ANTES de ejecutar)
+- Mecanismo: funding muy positivo = largos apalancados abarrotados que pagan por mantener posición; la posición se desarma con caídas bruscas (y quien está corto además cobra funding). Simétrico en negativo.
+- Datos: funding horario nativo de Hyperliquid (2023-06 →) para monedas con par Binance (precio proxy 5m).
+- Señal: media de funding de las últimas 8 h, comparada con su percentil rolling de 30 días **excluyendo la observación actual**. Contrarian: corto si ≥ percentil p, largo si ≤ 1−p. Una posición por moneda a la vez. Entrada en la apertura de la barra 5m siguiente.
+- Rejilla: p ∈ {90%, 95%, 99%}, H ∈ {8 h, 24 h}, filtro de liquidez adv24 ≥ $5M → 6 variantes. El PnL incluye el funding cobrado/pagado durante la retención.
+- Éxito: puertas de TARGETS.md.
+
 ## Exploratorias
 Todo hallazgo surgido de mirar train (incluidas observaciones heurísticas) debe registrarse aquí como EXP-1xx con su mecanismo **antes** de evaluarse en val.
 
@@ -45,4 +53,9 @@ La primera pasada mostró +30 bps netos (IC95 inferior +22) en EXP-001 corto-tra
 ### EXP-004: descartada
 18 de 18 variantes negativas, todos los años. Ventaja bruta 0 a 3,5 bps frente a 11 bps de costo. Confirma que la reversión cross-sectional clásica no sobrevive costos en esta escala.
 
-Variantes miradas en train hasta ahora: 162 + 72 + 18 = 252 (más 1 corrida con la fuga, descartada).
+### Barrido estructural abierto (train, muestra 3%, 1,58 M barras líquidas, 33 pruebas feature×horizonte)
+- Ninguna variable de precio/flujo/OI muestra ventaja bruta > 11 bps a 30-60 min. A 4 h la mayor es **hora del día**: perfil suave y continuo (+17 bps entrando a las 20 UTC; −10 bps largo entrando 10 UTC), media incondicional +0,7 bps (no es deriva).
+- Falla de robustez: BTC/ETH/SOL ≈ 0 bps; vive en monedas pequeñas (86% de 320 con media positiva); por semestre +21 / +20 / +22 y luego **−4,5 en 2025H1**. Descartado como candidato (mismo patrón de decaimiento que EXP-001).
+- **Hallazgo central:** en todas las familias probadas la ventaja existía en 2023-2024 y se agota en 2025. Lo relevante es el régimen reciente, y ahí las ventajas simples de precio/flujo en perpetuos líquidos no sobreviven a 11 bps.
+
+Variantes miradas en train hasta ahora: 162 + 72 + 18 + 33 = 285 (más 1 corrida con la fuga, descartada).
