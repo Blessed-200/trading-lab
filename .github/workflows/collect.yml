@@ -52,6 +52,8 @@ jobs:
         run: python scripts/collect_data.py --days "$DAYS" --count 30 --workers 6 --out data
       - name: Report coverage
         run: python scripts/validate_data.py data
+      - name: Calibrate Binance versus Hyperliquid 1m close proxies
+        run: python scripts/calibrate_proxy.py data
       - name: Package full dataset
         run: |
           cd data
@@ -72,4 +74,5 @@ jobs:
             data/manifest.json
             data/universe.json
             data/audit.json
+            data/proxy_calibration.json
           if-no-files-found: warn
