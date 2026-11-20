@@ -33,6 +33,17 @@ Presupuesto global: ≤ 200 variantes evaluadas en val. Cada exploración en tra
 - Rejilla: p ∈ {90%, 95%, 99%}, H ∈ {8 h, 24 h}, filtro de liquidez adv24 ≥ $5M → 6 variantes. El PnL incluye el funding cobrado/pagado durante la retención.
 - Éxito: puertas de TARGETS.md.
 
+
+### EXP-006: atlas de excursiones y salida por cuantil (a priori, registrada 2026-11-20 antes de ejecutar)
+- Idea del dueño: medir para cada moneda hasta dónde llega el precio a favor (MFE) y en contra (MAE) en 30/60 min y salir en el punto que casi siempre se alcanza.
+- Hipótesis nula explícita: bajo entradas sin ventaja, una salida por cuantil **no crea expectativa** (cambia la tasa de acierto y el pago, no su producto). Se verifica con entradas incondicionales y con las mejores condiciones de EXP-001.
+- Medición: cuantiles de MFE/MAE por moneda y por grupo de liquidez; simulación de políticas TP/SL/tiempo (TP ∈ {p50, p70}, SL ∈ {p50, p70} de MAE, tiempo 6/12 barras) con regla conservadora (si TP y SL caen en la misma barra, cuenta el SL). 8 variantes.
+
+### EXP-007: modelo directo sobre los datos (a priori, registrada 2026-11-20 antes de ejecutar)
+- Idea del dueño: no probar intuiciones, dejar que los datos digan qué condiciones preceden movimientos.
+- Diseño: LightGBM de regresión (configuración única fija) sobre ~30 variables de precio, flujo, OI retrasado, volatilidad, hora y contexto BTC; objetivo = retorno futuro a H barras recortado a ±5σ. Walk-forward **solo dentro de train**: entrenar 12 meses, probar el trimestre siguiente (4 pliegues: 2024Q3 → 2025Q2). H ∈ {6, 12, 48}. Operar solo el 1% o el 5% de predicciones más extremas, lado = signo, costo 11 bps. 6 variantes.
+- Éxito: neto > 0 con IC95 inferior > 0 en ≥ 3 de 4 pliegues, incluido el último; si no, descartada.
+
 ## Exploratorias
 Todo hallazgo surgido de mirar train (incluidas observaciones heurísticas) debe registrarse aquí como EXP-1xx con su mecanismo **antes** de evaluarse en val.
 
