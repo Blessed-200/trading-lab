@@ -32,7 +32,7 @@ concurrency:
 
 env:
   RELEASE: data-v2
-  SHARDS: "16"
+  SHARDS: "48"
 
 jobs:
   test:
@@ -100,8 +100,9 @@ jobs:
     timeout-minutes: 330
     strategy:
       fail-fast: false
+      max-parallel: 16
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -115,8 +116,8 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           mkdir -p data /tmp/prev
-          gh release download "$RELEASE" -R "$GITHUB_REPOSITORY" --pattern "binance-shard-${SHARD}.zip" --dir /tmp/prev || true
-          if [ -f "/tmp/prev/binance-shard-${SHARD}.zip" ]; then unzip -q "/tmp/prev/binance-shard-${SHARD}.zip" -d data; fi
+          gh release download "$RELEASE" -R "$GITHUB_REPOSITORY" --pattern "binance-s${SHARDS}-${SHARD}.zip" --dir /tmp/prev || true
+          if [ -f "/tmp/prev/binance-s${SHARDS}-${SHARD}.zip" ]; then unzip -q "/tmp/prev/binance-s${SHARDS}-${SHARD}.zip" -d data; fi
       - name: Download Binance archives for this shard
         env:
           START: ${{ inputs.start }}
@@ -125,7 +126,7 @@ jobs:
         run: |
           ARGS=""
           if [ -n "$START" ]; then ARGS="--start $START"; fi
-          python scripts/collect_data.py binance --out data --shard "$SHARD" --shards "$SHARDS" --workers 8 --max-symbols "$MAXSYM" $ARGS
+          python scripts/collect_data.py binance --out data --shard "$SHARD" --shards "$SHARDS" --workers 6 --max-symbols "$MAXSYM" $ARGS
       - name: Audit coverage
         run: python scripts/validate_data.py data
       - name: Package and publish shard
@@ -134,6 +135,6 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: |
           rm -f data/audit.json
-          cd data && zip -q -r -0 "/tmp/binance-shard-${SHARD}.zip" .
-          ls -lh "/tmp/binance-shard-${SHARD}.zip"
-          gh release upload "$RELEASE" "/tmp/binance-shard-${SHARD}.zip" -R "$GITHUB_REPOSITORY" --clobber
+          cd data && zip -q -r -0 "/tmp/binance-s${SHARDS}-${SHARD}.zip" .
+          ls -lh "/tmp/binance-s${SHARDS}-${SHARD}.zip"
+          gh release upload "$RELEASE" "/tmp/binance-s${SHARDS}-${SHARD}.zip" -R "$GITHUB_REPOSITORY" --clobber
