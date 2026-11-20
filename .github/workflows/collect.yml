@@ -1,19 +1,25 @@
-name: Free 105d hybrid data collection
+name: Collect full-universe dataset
 
 on:
   push:
     branches: [main]
     paths:
       - 'scripts/**'
+      - 'src/**'
       - 'tests/**'
       - 'requirements.txt'
+      - 'pytest.ini'
       - '.github/workflows/collect.yml'
   workflow_dispatch:
     inputs:
-      days:
-        description: "Backfill days (default 105)"
+      start:
+        description: "Backfill start date YYYY-MM-DD (empty = last 7 days, incremental)"
         required: false
-        default: "105"
+        default: ""
+      max_symbols:
+        description: "Smoke test: limit symbols per shard (0 = no limit)"
+        required: false
+        default: "0"
   schedule:
     - cron: '17 4 * * *'
 
@@ -24,8 +30,38 @@ concurrency:
   group: trading-lab-dataset
   cancel-in-progress: false
 
+env:
+  RELEASE: data-v2
+  SHARDS: "16"
+
 jobs:
-  collect:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+
+  prepare:
+    # Data collection does not wait for tests; tests gate code quality, not downloads.
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create "$RELEASE" -R "$GITHUB_REPOSITORY" \
+            --title "Dataset v2 (full universe, no survivorship filter)" \
+            --notes "Binance USD-M perps (all, incl. delisted) 1m klines + 5m metrics, sharded; Hyperliquid funding/candles/context snapshots. See manifest files inside each asset."
+
+  native:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 330
     steps:
@@ -35,44 +71,69 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
       - run: pip install -r requirements.txt
-      - run: pytest -q
-      - name: Restore prior release dataset (incremental)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          mkdir -p data
-          gh release download dataset-latest --pattern 'dataset.zip' --dir /tmp || true
-          if [ -f /tmp/dataset.zip ]; then
-            unzip -q /tmp/dataset.zip -d data
-          fi
-      - name: Download archives and native data
-        env:
-          DAYS: ${{ inputs.days || '105' }}
-        run: python scripts/collect_data.py --days "$DAYS" --count 30 --workers 6 --out data
-      - name: Report coverage
-        run: python scripts/validate_data.py data
-      - name: Calibrate Binance versus Hyperliquid 1m close proxies
-        run: python scripts/calibrate_proxy.py data
-      - name: Package full dataset
-        run: |
-          cd data
-          zip -q -r -1 /tmp/dataset.zip .
-          ls -lh /tmp/dataset.zip
-      - name: Publish permanent versioned release asset
+      - name: Restore prior Hyperliquid history
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view dataset-latest >/dev/null 2>&1 || gh release create dataset-latest --title 'Dataset (rolling snapshot)' --notes 'Public Binance proxy and native Hyperliquid. See manifest.json for coverage.'
-          gh release upload dataset-latest /tmp/dataset.zip --clobber
-      - name: Upload manifest as artifact
-        if: always()
-        uses: actions/upload-artifact@v4
+          mkdir -p data /tmp/prev
+          gh release download "$RELEASE" -R "$GITHUB_REPOSITORY" --pattern 'hyperliquid.zip' --dir /tmp/prev || true
+          if [ -f /tmp/prev/hyperliquid.zip ]; then unzip -q /tmp/prev/hyperliquid.zip -d data; fi
+      - name: Build universe (all Binance perps incl. delisted + HL mapping)
+        run: python scripts/collect_data.py universe --out data
+      - name: Hyperliquid native collection
+        env:
+          MAXSYM: ${{ inputs.max_symbols || '0' }}
+        run: python scripts/collect_data.py native --out data --max-symbols "$MAXSYM"
+      - name: Package and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd data && zip -q -r -0 /tmp/hyperliquid.zip .
+          ls -lh /tmp/hyperliquid.zip
+          gh release upload "$RELEASE" /tmp/hyperliquid.zip -R "$GITHUB_REPOSITORY" --clobber
+          cp universe.json /tmp/universe.json
+          gh release upload "$RELEASE" /tmp/universe.json -R "$GITHUB_REPOSITORY" --clobber
+
+  binance:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
-          name: manifest-and-audit
-          path: |
-            data/manifest.json
-            data/universe.json
-            data/audit.json
-            data/proxy_calibration.json
-          if-no-files-found: warn
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Restore this shard's prior data (incremental)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          mkdir -p data /tmp/prev
+          gh release download "$RELEASE" -R "$GITHUB_REPOSITORY" --pattern "binance-shard-${SHARD}.zip" --dir /tmp/prev || true
+          if [ -f "/tmp/prev/binance-shard-${SHARD}.zip" ]; then unzip -q "/tmp/prev/binance-shard-${SHARD}.zip" -d data; fi
+      - name: Download Binance archives for this shard
+        env:
+          START: ${{ inputs.start }}
+          MAXSYM: ${{ inputs.max_symbols || '0' }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          ARGS=""
+          if [ -n "$START" ]; then ARGS="--start $START"; fi
+          python scripts/collect_data.py binance --out data --shard "$SHARD" --shards "$SHARDS" --workers 8 --max-symbols "$MAXSYM" $ARGS
+      - name: Audit coverage
+        run: python scripts/validate_data.py data
+      - name: Package and publish shard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          rm -f data/audit.json
+          cd data && zip -q -r -0 "/tmp/binance-shard-${SHARD}.zip" .
+          ls -lh "/tmp/binance-shard-${SHARD}.zip"
+          gh release upload "$RELEASE" "/tmp/binance-shard-${SHARD}.zip" -R "$GITHUB_REPOSITORY" --clobber

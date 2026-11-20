@@ -11,7 +11,8 @@ import pandas as pd
 
 
 def calibrate(root: Path) -> dict:
-    universe = json.loads((root / "universe.json").read_text())["selected"]
+    rows = json.loads((root / "universe.json").read_text())["symbols"]
+    universe = [{"coin": r["hl_coin"], "symbol": r["symbol"]} for r in rows if r["hl_coin"]]
     results = []
     for row in universe:
         coin, symbol = row["coin"], row["symbol"]

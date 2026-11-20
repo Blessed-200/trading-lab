@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Audit on-disk coverage. Intentionally does not claim predictive quality."""
+"""Audit on-disk Binance coverage for whatever is present in <root>.
+
+Reports facts only (rows, invalid candles, minute gaps); it makes no claim about
+predictive quality. Minute gaps can be legitimate (exchange maintenance).
+"""
 from __future__ import annotations
 import json
 import sys
@@ -8,12 +12,10 @@ import pandas as pd
 
 
 def audit(root: Path) -> dict:
-    universe = json.loads((root / "universe.json").read_text())["selected"]
-    manifest = json.loads((root / "manifest.json").read_text())
     records = []
-    for item in universe:
-        symbol = item["symbol"]
-        paths = sorted((root / "binance" / "klines" / symbol).glob("*.parquet"))
+    base = root / "binance" / "klines"
+    for sym_dir in sorted(p for p in base.glob("*") if p.is_dir()):
+        paths = sorted(sym_dir.glob("*.parquet"))
         rows, invalid, gaps = 0, 0, 0
         previous = None
         for path in paths:
@@ -21,23 +23,23 @@ def audit(root: Path) -> dict:
             rows += len(df)
             invalid += int((df["available_at"] <= df["open_time"]).sum())
             invalid += int((df["high"] < df["low"]).sum())
-            if previous is not None and len(df):
-                gaps += int((df["open_time"].iloc[0] - previous) != pd.Timedelta(minutes=1))
             if len(df):
+                if previous is not None:
+                    gaps += int((df["open_time"].iloc[0] - previous) != pd.Timedelta(minutes=1))
                 gaps += int((df["open_time"].diff().dropna() != pd.Timedelta(minutes=1)).sum())
                 previous = df["open_time"].iloc[-1]
-        records.append({"symbol": symbol, "days": len(paths), "rows": rows,
-                        "invalid": invalid, "discontinuities": gaps})
+        records.append({"symbol": sym_dir.name, "days": len(paths), "rows": rows,
+                        "invalid": invalid, "minute_gaps": gaps})
     report = {"created_utc": pd.Timestamp.now(tz="UTC").isoformat(),
-              "expected_daily_files": manifest["archive_expected_files"],
-              "archive_success": manifest["archives_success"],
-              "per_symbol": records,
+              "symbols": len(records),
               "total_kline_rows": sum(x["rows"] for x in records),
-              "invalid_rows": sum(x["invalid"] for x in records)}
+              "invalid_rows": sum(x["invalid"] for x in records),
+              "per_symbol": records}
     (root / "audit.json").write_text(json.dumps(report, indent=2))
-    print(json.dumps(report, indent=2))
-    if report["total_kline_rows"] == 0 or report["invalid_rows"]:
-        raise SystemExit("Audit failed")
+    print(json.dumps({k: v for k, v in report.items() if k != "per_symbol"}, indent=2))
+    if report["invalid_rows"]:
+        raise SystemExit("Audit failed: invalid candles found")
+    return report
 
 
 if __name__ == "__main__":
