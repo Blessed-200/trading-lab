@@ -58,4 +58,8 @@ La primera pasada mostró +30 bps netos (IC95 inferior +22) en EXP-001 corto-tra
 - Falla de robustez: BTC/ETH/SOL ≈ 0 bps; vive en monedas pequeñas (86% de 320 con media positiva); por semestre +21 / +20 / +22 y luego **−4,5 en 2025H1**. Descartado como candidato (mismo patrón de decaimiento que EXP-001).
 - **Hallazgo central:** en todas las familias probadas la ventaja existía en 2023-2024 y se agota en 2025. Lo relevante es el régimen reciente, y ahí las ventajas simples de precio/flujo en perpetuos líquidos no sobreviven a 11 bps.
 
-Variantes miradas en train hasta ahora: 162 + 72 + 18 + 33 = 285 (más 1 corrida con la fuga, descartada).
+### EXP-005 (funding extremo contrarian): descartada
+6 variantes. El funding cobrado aporta +3 a +12 bps pero el precio va en contra (−9 a +11 bps según variante). Mejor: p=99%, H=8h, +5,8 bps netos con IC95 inferior −16 bps y signo distinto cada año (2023: −9, 2024: +11, 2025: +3). Sin evidencia de ventaja.
+
+Variantes miradas en train hasta ahora: 162 + 72 + 18 + 33 + 6 = 291 (más 1 corrida con la fuga, descartada).
+**Estado de las bóvedas: A y B selladas, sin abrir. Validación (2025-07 → 2025-12): sin tocar. Ningún candidato ha pasado la Puerta 1.**
