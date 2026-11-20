@@ -1,0 +1,68 @@
+name: Free 105d hybrid data collection
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Backfill days (default 105)"
+        required: false
+        default: "105"
+  schedule:
+    - cron: '17 4 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trading-lab-dataset
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+      - name: Restore prior release dataset (incremental)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p data
+          gh release download dataset-latest --pattern 'dataset.zip' --dir /tmp || true
+          if [ -f /tmp/dataset.zip ]; then
+            unzip -q /tmp/dataset.zip -d data
+          fi
+      - name: Download archives and native data
+        env:
+          DAYS: ${{ inputs.days || '105' }}
+        run: python scripts/collect_data.py --days "$DAYS" --count 30 --workers 6 --out data
+      - name: Report coverage
+        run: python scripts/validate_data.py data
+      - name: Package full dataset
+        run: |
+          cd data
+          zip -q -r -1 /tmp/dataset.zip .
+          ls -lh /tmp/dataset.zip
+      - name: Publish permanent versioned release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view dataset-latest >/dev/null 2>&1 || gh release create dataset-latest --title 'Dataset (rolling snapshot)' --notes 'Public Binance proxy and native Hyperliquid. See manifest.json for coverage.'
+          gh release upload dataset-latest /tmp/dataset.zip --clobber
+      - name: Upload manifest as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-and-audit
+          path: |
+            data/manifest.json
+            data/universe.json
+            data/audit.json
+          if-no-files-found: warn
