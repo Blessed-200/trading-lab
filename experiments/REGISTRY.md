@@ -28,5 +28,21 @@ Presupuesto global: ≤ 200 variantes evaluadas en val. Cada exploración en tra
 ## Exploratorias
 Todo hallazgo surgido de mirar train (incluidas observaciones heurísticas) debe registrarse aquí como EXP-1xx con su mecanismo **antes** de evaluarse en val.
 
-## Resultados
-(vacío: aún no se ha corrido ningún experimento)
+## Resultados (train 2023-06 → 2025-06; val y bóvedas NO tocadas)
+
+### Incidente de fuga (2026-11-20): detectado y corregido
+La primera pasada mostró +30 bps netos (IC95 inferior +22) en EXP-001 corto-tras-pump y +22 bps en cuatro variantes de EXP-002. Todas dependían del cambio de OI. Prueba de alineación: el cambio de OI de una barra correlaciona 0,60 con el retorno de esa barra y **0,12 con el de la siguiente**: la instantánea de OI con sello T ya incluye precio posterior a T. Corrección: OI retrasado una barra completa (`features.py`, con prueba de regresión). Los resultados con OI sin retraso quedan **descartados**. Lección: un resultado "demasiado bueno" fue una fuga; el protocolo lo atrapó antes de abrir ninguna bóveda.
+
+### EXP-001 (con OI corregido): descartada
+- Corto tras pump: negativo (media −13 bps netos).
+- Largo tras capitulación: 6 de 81 variantes con IC95 inferior > 0 y solo con k=4, v=5. Mejor: +31 bps netos pero **por año: 2023 +151, 2024 +48, 2025 −4**. Ventaja agotada: falla Puerta 1 (positivo en el tramo reciente). No pasa a val.
+
+### EXP-002 (con OI corregido): descartada
+0 de 72 variantes con media neta > 0. Ventaja bruta ≈ 0 en los cuatro cuadrantes.
+
+### EXP-003: pendiente (se espera que falle).
+
+### EXP-004: descartada
+18 de 18 variantes negativas, todos los años. Ventaja bruta 0 a 3,5 bps frente a 11 bps de costo. Confirma que la reversión cross-sectional clásica no sobrevive costos en esta escala.
+
+Variantes miradas en train hasta ahora: 162 + 72 + 18 = 252 (más 1 corrida con la fuga, descartada).

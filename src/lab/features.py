@@ -25,8 +25,11 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     prev_std = qv.shift(1).rolling(DAY, min_periods=DAY // 2).std()
     d["vol_z"] = (qv - prev_mean) / prev_std.replace(0, np.nan)
     d["adv24"] = qv.shift(1).rolling(DAY, min_periods=DAY // 2).sum()   # trailing 24h $ volume
-    # contract-unit OI: strips the mechanical price effect from USD OI
-    oi_units = d["oi_value"].astype("float64") / d["close"].astype("float64")
+    # contract-unit OI strips the mechanical price effect from USD OI.
+    # LEAK FIX (2026-11-20): Binance OI snapshots stamped T already embed price after T
+    # (corr 0.12 with the NEXT bar's return). The whole OI series is therefore delayed by
+    # one full bar, so row t uses only snapshots stamped <= t-1.
+    oi_units = (d["oi_value"].astype("float64") / d["close"].astype("float64")).shift(1)
     d["oi_chg15"] = oi_units / oi_units.shift(3) - 1
     d["imb_ma3"] = d["imbalance"].rolling(3, min_periods=2).mean()
     return d

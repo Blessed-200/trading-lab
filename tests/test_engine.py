@@ -77,3 +77,17 @@ def test_summarize_bootstrap_ci_brackets_a_clear_edge():
     net = pd.Series(rng.normal(0.001, 0.004, n))
     s = summarize(net, day)
     assert s["ci95_lo_bps"] > 0 and s["ci95_lo_bps"] < s["mean_bps"] < s["ci95_hi_bps"]
+
+
+def test_oi_feature_ignores_the_current_rows_oi_snapshot():
+    """Regression test for the 2026-11-20 leak: OI stamped at bar t embeds post-t price."""
+    rng = np.random.default_rng(3)
+    closes = 100 * np.cumprod(1 + rng.normal(0, 0.001, 400))
+    d = _bars(closes)
+    d["oi_value"] = np.linspace(1e6, 2e6, 400)
+    a = add_features(d)
+    d2 = d.copy()
+    d2.loc[300, "oi_value"] = 5e6                    # corrupt only the snapshot at row 300
+    b = add_features(d2)
+    assert a.loc[300, "oi_chg15"] == b.loc[300, "oi_chg15"]
+    assert a.loc[:300, "oi_chg15"].fillna(0).equals(b.loc[:300, "oi_chg15"].fillna(0))

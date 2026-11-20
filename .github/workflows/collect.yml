@@ -96,6 +96,8 @@ jobs:
 
   binance:
     needs: prepare
+    # the daily schedule only refreshes Hyperliquid native data; Binance backfills are manual
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     strategy:
