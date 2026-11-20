@@ -1,6 +1,13 @@
 name: Free 105d hybrid data collection
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/collect.yml'
   workflow_dispatch:
     inputs:
       days:
