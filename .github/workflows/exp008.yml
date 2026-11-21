@@ -1,0 +1,59 @@
+name: EXP-008 passive-execution replay (train only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  SRC_RELEASE: data-v2
+  OUT_RELEASE: research-results
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ensure results release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$OUT_RELEASE" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
+          gh release create "$OUT_RELEASE" -R "$GITHUB_REPOSITORY" --title "research results" \
+            --notes "Small result tables from research jobs (train data only)."
+
+  replay:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      max-parallel: 16
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r requirements.txt
+      - name: Download shard and extract TRAIN-period 1m klines only (no val, no vault days)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          mkdir -p /tmp/raw /tmp/dl
+          gh release download "$SRC_RELEASE" -R "$GITHUB_REPOSITORY" --pattern "binance-s48-${SHARD}.zip" --dir /tmp/dl
+          unzip -q "/tmp/dl/binance-s48-${SHARD}.zip" -d /tmp/raw -x 'binance/metrics/*' 'manifest*' \
+            'binance/klines/*/2025-0[7-9]-*' 'binance/klines/*/2025-1*' 'binance/klines/*/2026-*'
+          rm -rf /tmp/dl
+      - name: Replay selections on 1m data
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: python scripts/exp008_shard.py /tmp/raw experiments/data/exp007_selections.parquet "/tmp/exp008-s48-${SHARD}.parquet" "$SHARD"
+      - name: Publish result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHARD: ${{ matrix.shard }}
+        run: gh release upload "$OUT_RELEASE" "/tmp/exp008-s48-${SHARD}.parquet" -R "$GITHUB_REPOSITORY" --clobber
