@@ -79,6 +79,23 @@ Variantes miradas en train hasta ahora: 162 + 72 + 18 + 33 + 6 = 291 (más 1 cor
 - Sobre eventos EXP-001 (dip k=4, v=5): mejor celda +11,7 bps brutos / +0,7 netos (ventana 60 min, TP p70, SL p50, ventanas ambiguas 50/50); con la regla conservadora −22 bps. Es 1 de 8 sobre una señal que ya se agotó en 2025. No pasa.
 - Corrección de proceso: la primera ejecución tenía los percentiles del lado adverso invertidos y trataba toda ventana ambigua como stop; ambas cosas corregidas y re-ejecutadas antes de sacar conclusiones.
 
-Variantes miradas en train: 291 + 8 = 299 (+ EXP-007 en curso).
+Variantes miradas en train: 291 + 8 = 299.
+### EXP-007 (LightGBM directo, walk-forward dentro de train): no cumple el criterio, señal débil real
+- 4 pliegues trimestrales (2024Q3 → 2025Q2), H ∈ {6, 12, 48}, top 1% y 5% de |predicción|, costo 11 bps.
+- **IC de rango positivo en 12 de 12 pliegues** (+0,007 a +0,059; media 0,018 / 0,021 / 0,031 para H=6/12/48): hay estructura predecible, pequeña.
+- Ventaja bruta del top 1%: 11,8 (H=6) / 15,1 (H=12) / 0,6 (H=48) bps. Neta tras 11 bps: +0,8 / +4,1 / −10,5. Pliegues con neto > 0: 2/3/2 de 4. **Pliegues con IC95 inferior > 0: 0/0/1 de 4** (la única celda es 2025Q2 H=48 top 1%, +33 bps, y no se repite en los otros pliegues). Criterio pre-registrado (≥ 3 de 4, incluido el último): NO cumplido.
+- Variables más usadas: hora y día de la semana ≈ 41% de la ganancia total (estacionalidad, que ya mostró decaer en 2025), luego contexto BTC y retornos a 4-24 h.
+- Lectura: la señal bruta (~12-15 bps en el 1% extremo, ~30 operaciones/día en todo el universo) es del tamaño del costo de tomar liquidez. El cuello de botella es el costo de ejecución, no la señal.
+
+Variantes miradas en train: 299 + 6 = 305.
+
+### EXP-008: ejecución pasiva realista de las selecciones de EXP-007 (a priori, registrada ANTES de ejecutar)
+- Pregunta: ¿sobrevive la señal de EXP-007 si se entra con orden límite (maker) con un modelo de relleno que incluya la selección adversa, usando velas de **1 minuto** ya descargadas?
+- Datos: las selecciones fuera de muestra top 1% de EXP-007 (`exp007_selections.parquet`), 4 pliegues de train; velas 1m de los shards crudos (Actions, 48 tareas). Val y bóvedas no se tocan.
+- Reglas de relleno (conservadoras): orden límite en el precio de cierre de la barra de señal, vigente 5 min (5 velas 1m). Compra se llena solo si el mínimo de una vela 1m cae **por debajo** del límite en ≥ 1 bps (atraviesa, no solo toca); venta, simétrico. Sin relleno = sin operación (se cuenta la tasa de relleno y el retorno de las no llenadas).
+- Salidas: (a) taker al cierre del horizonte H; (b) límite en el precio de cierre de la barra H−1, con respaldo taker tras 2 barras sin relleno.
+- Costos: maker 1,5 bps + slippage 0; taker 4,5 + 1 bps. Variantes: 2 reglas de salida × H ∈ {6, 12} = 4 variantes.
+- Éxito: neto por **señal** (no solo por operación llenada) > 0 con IC95 inferior > 0 en ≥ 3 de 4 pliegues. Se reporta explícitamente el retorno de las órdenes que no se llenaron: si las no llenadas ganan más que las llenadas, hay selección adversa y el resultado queda descartado.
+
 
 **Estado de las bóvedas: A y B selladas, sin abrir. Validación (2025-07 → 2025-12): sin tocar. Ningún candidato ha pasado la Puerta 1.**
