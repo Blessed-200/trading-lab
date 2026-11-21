@@ -73,4 +73,12 @@ La primera pasada mostró +30 bps netos (IC95 inferior +22) en EXP-001 corto-tra
 6 variantes. El funding cobrado aporta +3 a +12 bps pero el precio va en contra (−9 a +11 bps según variante). Mejor: p=99%, H=8h, +5,8 bps netos con IC95 inferior −16 bps y signo distinto cada año (2023: −9, 2024: +11, 2025: +3). Sin evidencia de ventaja.
 
 Variantes miradas en train hasta ahora: 162 + 72 + 18 + 33 + 6 = 291 (más 1 corrida con la fuga, descartada).
+### EXP-006 (atlas de excursiones y salida por cuantil): sin ventaja, descartada como estrategia
+- Atlas (2,1 M barras líquidas train, 491 monedas): las excursiones son **simétricas**. Moneda líquida, 30 min: subida máx p50/p70/p90 = 47/82/170 bps; caída máx = 49/85/170 bps. A 60 min: 66/116/243 vs 70/120/241. El mercado se mueve mucho pero igual en ambas direcciones.
+- Prueba nula (entradas incondicionales, 8 variantes de TP/SL por cuantil): ventaja bruta −4,4 a +2,3 bps ≈ 0; neto −9 a −15 bps ≈ el costo. Una salida por cuantil cambia tasa de acierto y pago pero **no crea expectativa**; la ventaja tiene que venir de la entrada.
+- Sobre eventos EXP-001 (dip k=4, v=5): mejor celda +11,7 bps brutos / +0,7 netos (ventana 60 min, TP p70, SL p50, ventanas ambiguas 50/50); con la regla conservadora −22 bps. Es 1 de 8 sobre una señal que ya se agotó en 2025. No pasa.
+- Corrección de proceso: la primera ejecución tenía los percentiles del lado adverso invertidos y trataba toda ventana ambigua como stop; ambas cosas corregidas y re-ejecutadas antes de sacar conclusiones.
+
+Variantes miradas en train: 291 + 8 = 299 (+ EXP-007 en curso).
+
 **Estado de las bóvedas: A y B selladas, sin abrir. Validación (2025-07 → 2025-12): sin tocar. Ningún candidato ha pasado la Puerta 1.**
