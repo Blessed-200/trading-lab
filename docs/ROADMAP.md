@@ -20,6 +20,7 @@ Estado: `[ ]` pendiente · `[~]` en curso · `[x]` hecho · `[!]` bloqueado
 
 ## Fase 2: Investigación (cada hipótesis en `experiments/REGISTRY.md`)
 - [x] Línea base y familias EXP-001, 002, 004, 005 en train: **todas descartadas** (ver REGISTRY). Fuga de OI detectada y corregida.
+- [x] EXP-006 (atlas de excursiones), EXP-007 (ML directo walk-forward), EXP-008 (ejecución pasiva con selección adversa): todas sin pasar Puerta 1
 - [ ] EXP-003 (lead-lag) pendiente
 - [ ] Filtro de liquidez **point-in-time** (volumen rodante conocido en t, nunca el de hoy)
 - [ ] Hipótesis estructurales: funding, flujo agresor + open interest, lead-lag, liquidaciones en cascada

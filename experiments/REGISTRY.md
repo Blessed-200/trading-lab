@@ -89,7 +89,7 @@ Variantes miradas en train: 291 + 8 = 299.
 
 Variantes miradas en train: 299 + 6 = 305.
 
-### EXP-008: ejecución pasiva realista de las selecciones de EXP-007 (a priori, registrada ANTES de ejecutar)
+### EXP-008 — protocolo (a priori, registrado ANTES de ejecutar)
 - Pregunta: ¿sobrevive la señal de EXP-007 si se entra con orden límite (maker) con un modelo de relleno que incluya la selección adversa, usando velas de **1 minuto** ya descargadas?
 - Datos: las selecciones fuera de muestra top 1% de EXP-007 (`exp007_selections.parquet`), 4 pliegues de train; velas 1m de los shards crudos (Actions, 48 tareas). Val y bóvedas no se tocan.
 - Reglas de relleno (conservadoras): orden límite en el precio de cierre de la barra de señal, vigente 5 min (5 velas 1m). Compra se llena solo si el mínimo de una vela 1m cae **por debajo** del límite en ≥ 1 bps (atraviesa, no solo toca); venta, simétrico. Sin relleno = sin operación (se cuenta la tasa de relleno y el retorno de las no llenadas).
@@ -99,3 +99,14 @@ Variantes miradas en train: 299 + 6 = 305.
 
 
 **Estado de las bóvedas: A y B selladas, sin abrir. Validación (2025-07 → 2025-12): sin tocar. Ningún candidato ha pasado la Puerta 1.**
+
+### EXP-008 (ejecución pasiva realista de las selecciones de EXP-007): descartada
+- 22.744 señales reproducidas en 1 minuto (464 monedas, train). Validación del simulador: el retorno taker a 1 min coincide con el de 5 min de EXP-007 (corr 1,0000, diferencia mediana 0,00 bps).
+- Tasa de relleno de la entrada pasiva: 92,9%. Salida pasiva (b) rellena 94,5%.
+- Neto por señal (media de 4 pliegues), H=6 / H=12: taker 0,8 / 4,1; maker-in+taker-out 0,6 / 5,5; maker-in+maker-out 1,1 negativo / 5,7. **Pliegues con IC95 inferior > 0: 0 de 4 en todas las variantes.** Criterio NO cumplido.
+- **Selección adversa medida:** retorno bruto P0→cierre de las señales NO llenadas = +68,8 bps (H=6) y +48,4 bps (H=12) frente a +8,1 y +12,7 de las llenadas. La orden límite pierde justo las señales que más ganan; el ahorro de comisión (~4 bps) se anula.
+- Por año (neto por señal): 2024 +4 a +15 bps, 2025 −1 a −3 bps. Mismo decaimiento que EXP-001 y el ciclo por hora.
+
+Variantes miradas en train: 305 + 4 = 309 (ocho familias de hipótesis). Ningún candidato pasa la Puerta 1. Bóvedas A y B selladas y sin abrir; validación 2025-07→12 sin tocar.
+
+**Conclusión del bloque:** con velas públicas y flujo agresor de perpetuos líquidos, no hay ventaja neta de costos en el régimen reciente (2025+), ni a mercado ni con ejecución pasiva realista. Existe una señal predictiva débil (IC ≈ 0,02) del tamaño del costo de ejecución.
